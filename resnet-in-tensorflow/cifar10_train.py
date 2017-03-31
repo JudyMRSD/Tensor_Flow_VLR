@@ -213,51 +213,80 @@ class Train(object):
         :return: the softmax probability with shape [num_test_images, num_labels]
         '''
         num_test_images = len(test_image_array)
+        print "FLAGS.test_batch_size"
+        print (FLAGS.test_batch_size)
         num_batches = num_test_images // FLAGS.test_batch_size
         remain_images = num_test_images % FLAGS.test_batch_size
         print '%i test batches in total...' %num_batches
 
         # Create the test image and labels placeholders
+        print "5----------"
+
         self.test_image_placeholder = tf.placeholder(dtype=tf.float32, shape=[FLAGS.test_batch_size,
                                                         IMG_HEIGHT, IMG_WIDTH, IMG_DEPTH])
 
         # Build the test graph
+        print "6----------"
         logits = inference(self.test_image_placeholder, FLAGS.num_residual_blocks, reuse=False)
+        print "7----------"
         predictions = tf.nn.softmax(logits)
 
         # Initialize a new session and restore a checkpoint
+        print "8----------"
         saver = tf.train.Saver(tf.global_variables())
+        print "9----------"
         sess = tf.Session()
+        #saver.restore(sess, './model.ckpt')
+        print "10----------"
 
-        saver.restore(sess, FLAGS.test_ckpt_path)
+        saver.restore(sess, './model_110.ckpt')
+        #saver.restore(sess, FLAGS.test_ckpt_path)
         print 'Model restored from ', FLAGS.test_ckpt_path
-
+        print "11----------"
         prediction_array = np.array([]).reshape(-1, NUM_CLASS)
+        print "num class"
+        print NUM_CLASS
         # Test by batches
+        print "12----------"
+
         for step in range(num_batches):
+            print "13----------"
+
             if step % 10 == 0:
                 print '%i batches finished!' %step
             offset = step * FLAGS.test_batch_size
+            print "14----------"
+
             test_image_batch = test_image_array[offset:offset+FLAGS.test_batch_size, ...]
+            print "15----------"
 
             batch_prediction_array = sess.run(predictions,
                                         feed_dict={self.test_image_placeholder: test_image_batch})
+            print "16----------"
 
             prediction_array = np.concatenate((prediction_array, batch_prediction_array))
 
         # If test_batch_size is not a divisor of num_test_images
+        print "17----------"
+
         if remain_images != 0:
+            print "18----------"
+
             self.test_image_placeholder = tf.placeholder(dtype=tf.float32, shape=[remain_images,
                                                         IMG_HEIGHT, IMG_WIDTH, IMG_DEPTH])
             # Build the test graph
+            print "19----------"
             logits = inference(self.test_image_placeholder, FLAGS.num_residual_blocks, reuse=True)
+            print "20----------"
             predictions = tf.nn.softmax(logits)
-
+            print "21----------"
             test_image_batch = test_image_array[-remain_images:, ...]
-
+            print "22----------"
             batch_prediction_array = sess.run(predictions, feed_dict={
                 self.test_image_placeholder: test_image_batch})
-
+            #print "batch image prediction array"
+            #print (batch_prediction_array)
+            print "23----------"
             prediction_array = np.concatenate((prediction_array, batch_prediction_array))
 
         return prediction_array
@@ -420,8 +449,29 @@ maybe_download_and_extract()
 # Initialize the Train object
 train = Train()
 # Start the training session
-train.train()
+#train.train()
+print "1----------"
+#saver.restore(sess, './model.ckpt')
+#print "2---------"
+train = Train()
+print "3----------"
+test_image_array, test_labels = read_in_all_images([vali_dir],
+                                                       is_random_label=VALI_RANDOM_LABEL)
+#test_image_array = whitening_image(test_image_array)
+print "test array shape"
+print test_image_array.shape
+test_image_array = test_image_array[0:200,:,:,:]
+print test_image_array.shape
+print "4----------"
+#test_image_array = test_image_array[]
+prediction_array = train.test(test_image_array)
+print "prediction array shape"
+print (prediction_array.shape)
+print "sum"
+print np.sum(prediction_array[0])
 
-
+#print top1_error
+#print loss
+#/Users/jinzhu/Google\ Drive/2017\ spring/visual\ learning\ recognition/Tensor\ FLow/resnet-in-tensorflow/model_110.ckpt-79999
 
 
