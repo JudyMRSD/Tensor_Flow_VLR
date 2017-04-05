@@ -56,3 +56,4 @@ directory to restore''')
 
 
 train_dir = 'logs_' + FLAGS.version + '/'
+test_dir = 'logs_test' + FLAGS.version + '/'

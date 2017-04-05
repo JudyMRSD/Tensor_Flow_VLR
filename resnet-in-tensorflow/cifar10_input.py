@@ -8,6 +8,8 @@ import numpy as np
 import cPickle
 import os
 import cv2
+from PIL import Image
+
 
 data_dir = 'cifar10_data'
 full_data_dir = 'cifar10_data/cifar-10-batches-py/data_batch_'
@@ -135,6 +137,12 @@ def whitening_image(image_np):
         #std = np.max(np.std(image_np[i, ...]), 1.0/np.sqrt(IMG_HEIGHT * IMG_WIDTH * IMG_DEPTH))
         std = max(np.std(image_np[i, ...]), 1.0/np.sqrt(IMG_HEIGHT * IMG_WIDTH * IMG_DEPTH))
         image_np[i,...] = (image_np[i, ...] - mean) / std
+        #print image
+        #print ("print images")
+        #print (image_np[i])
+        #print (image_np[i].size)
+        #img = Image.fromarray(image_np[i])
+        #img.show
     return image_np
 
 

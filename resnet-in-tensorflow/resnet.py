@@ -48,6 +48,8 @@ def output_layer(input_layer, num_labels):
     :return: output layer Y = WX + B
     '''
     input_dim = input_layer.get_shape().as_list()[-1]
+    #print "input shape ---------"
+    #print input_dim
     fc_w = create_variables(name='fc_weights', shape=[input_dim, num_labels], is_fc_layer=True,
                             initializer=tf.uniform_unit_scaling_initializer(factor=1.0))
     fc_b = create_variables(name='fc_bias', shape=[num_labels], initializer=tf.zeros_initializer())
@@ -120,6 +122,8 @@ def residual_block(input_layer, output_channel, first_block=False):
     :param first_block: if this is the first residual block of the whole network
     :return: 4D tensor.
     '''
+    #print "input shape ---------"
+    #print input_layer.get_shape().as_list()[-1]
     input_channel = input_layer.get_shape().as_list()[-1]
 
     # When it's time to "shrink" the image size, we use stride = 2
@@ -166,6 +170,8 @@ def inference(input_tensor_batch, n, reuse):
     with train graph, resue=True
     :return: last layer in the network. Not softmax-ed
     '''
+    print "input---------"
+    print input_tensor_batch.get_shape()
 
     layers = []
     with tf.variable_scope('conv0', reuse=reuse):
@@ -192,6 +198,7 @@ def inference(input_tensor_batch, n, reuse):
         with tf.variable_scope('conv3_%d' %i, reuse=reuse):
             conv3 = residual_block(layers[-1], 64)
             layers.append(conv3)
+        print conv3.get_shape().as_list()[1:] 
         assert conv3.get_shape().as_list()[1:] == [8, 8, 64]
 
     with tf.variable_scope('fc', reuse=reuse):
@@ -212,9 +219,12 @@ def test_graph(train_dir='logs'):
     Run this function to look at the graph structure on tensorboard. A fast way!
     :param train_dir:
     '''
-    input_tensor = tf.constant(np.ones([128, 32, 32, 3]), dtype=tf.float32)
+    #input_tensor = tf.constant(np.ones([128, 32, 32, 3]), dtype=tf.float32)
+
+    input_tensor = tf.constant(np.ones([300, 32, 32, 3]), dtype=tf.float32)
     result = inference(input_tensor, 2, reuse=False)
     init = tf.global_variables_initializer()
     sess = tf.Session()
     sess.run(init)
     summary_writer = tf.summary.FileWriter(train_dir, sess.graph)
+

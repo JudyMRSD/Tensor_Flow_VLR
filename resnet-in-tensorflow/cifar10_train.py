@@ -84,6 +84,7 @@ class Train(object):
         # memory
         all_data, all_labels = prepare_train_data(padding_size=FLAGS.padding_size)
         vali_data, vali_labels = read_validation_data()
+        #tf.summary.image('input', all_data, 10)
 
         # Build the graph for train and validation
         self.build_train_validation_graph()
@@ -107,13 +108,12 @@ class Train(object):
         summary_writer = tf.summary.FileWriter(train_dir, sess.graph)
 
 
+
+
         # These lists are used to save a csv file at last
         step_list = []
         train_error_list = []
         val_error_list = []
-
-        print 'Start training...'
-        print '----------------------------'
 
         for step in xrange(FLAGS.train_steps):
 
@@ -213,6 +213,7 @@ class Train(object):
         :return: the softmax probability with shape [num_test_images, num_labels]
         '''
         num_test_images = len(test_image_array)
+        #tf.summary.image('input_test_images', test_image_array, 10)
         print "FLAGS.test_batch_size"
         print (FLAGS.test_batch_size)
         num_batches = num_test_images // FLAGS.test_batch_size
@@ -220,73 +221,54 @@ class Train(object):
         print '%i test batches in total...' %num_batches
 
         # Create the test image and labels placeholders
-        print "5----------"
-
         self.test_image_placeholder = tf.placeholder(dtype=tf.float32, shape=[FLAGS.test_batch_size,
                                                         IMG_HEIGHT, IMG_WIDTH, IMG_DEPTH])
 
         # Build the test graph
-        print "6----------"
         logits = inference(self.test_image_placeholder, FLAGS.num_residual_blocks, reuse=False)
-        print "7----------"
         predictions = tf.nn.softmax(logits)
+        #conv_17_vis = 
 
         # Initialize a new session and restore a checkpoint
-        print "8----------"
         saver = tf.train.Saver(tf.global_variables())
-        print "9----------"
         sess = tf.Session()
         #saver.restore(sess, './model.ckpt')
-        print "10----------"
 
         saver.restore(sess, './model_110.ckpt')
         #saver.restore(sess, FLAGS.test_ckpt_path)
-        print 'Model restored from ', FLAGS.test_ckpt_path
-        print "11----------"
+        #print 'Model restored from ', FLAGS.test_ckpt_path
         prediction_array = np.array([]).reshape(-1, NUM_CLASS)
-        print "num class"
-        print NUM_CLASS
+        #print NUM_CLASS
         # Test by batches
-        print "12----------"
+        summary_op = tf.summary.merge_all()
+
+        summary_writer = tf.summary.FileWriter(test_dir, sess.graph)
 
         for step in range(num_batches):
-            print "13----------"
 
             if step % 10 == 0:
                 print '%i batches finished!' %step
             offset = step * FLAGS.test_batch_size
-            print "14----------"
-
             test_image_batch = test_image_array[offset:offset+FLAGS.test_batch_size, ...]
-            print "15----------"
-
             batch_prediction_array = sess.run(predictions,
                                         feed_dict={self.test_image_placeholder: test_image_batch})
-            print "16----------"
-
             prediction_array = np.concatenate((prediction_array, batch_prediction_array))
+            #print out shape of Conv3 layer
+            #test = tf.get_default_graph().get_tensor_by_name('conv3_17:0')
+            #print test #Tensor("example:0", shape=(2, 2), dtype=float32)
 
         # If test_batch_size is not a divisor of num_test_images
-        print "17----------"
-
         if remain_images != 0:
-            print "18----------"
-
             self.test_image_placeholder = tf.placeholder(dtype=tf.float32, shape=[remain_images,
                                                         IMG_HEIGHT, IMG_WIDTH, IMG_DEPTH])
             # Build the test graph
-            print "19----------"
             logits = inference(self.test_image_placeholder, FLAGS.num_residual_blocks, reuse=True)
-            print "20----------"
             predictions = tf.nn.softmax(logits)
-            print "21----------"
             test_image_batch = test_image_array[-remain_images:, ...]
-            print "22----------"
             batch_prediction_array = sess.run(predictions, feed_dict={
                 self.test_image_placeholder: test_image_batch})
             #print "batch image prediction array"
             #print (batch_prediction_array)
-            print "23----------"
             prediction_array = np.concatenate((prediction_array, batch_prediction_array))
 
         return prediction_array
@@ -444,29 +426,54 @@ class Train(object):
 
         return np.mean(loss_list), np.mean(error_list)
 
+#print out dimension for Conv3_17
+#def getCon3Value():
+#    with tf.Session() as sess:
+#        #Return a tensor with the same shape and contents as the input tensor or value
+#        output = tf.identity(model(get_variable('conv3_17')))
+#        sess.run(output)
+#        print (output.eval)
+#    def getConv3Value(self):
+#        with tf.Session() as sess:
+#            test =  sess.run(e)
+#            print e.name #example:0
+#            test = tf.get_default_graph().get_tensor_by_name('conv3_17')
+#            print test #Tensor("example:0", shape=(2, 2), dtype=float32)
+
+
 
 maybe_download_and_extract()
+"""
+#training
 # Initialize the Train object
 train = Train()
 # Start the training session
-#train.train()
-print "1----------"
-#saver.restore(sess, './model.ckpt')
-#print "2---------"
+train.train()
+"""
+#testing
+# Initialize the Train object
 train = Train()
-print "3----------"
+
+#print "3----------"
 test_image_array, test_labels = read_in_all_images([vali_dir],
-                                                       is_random_label=VALI_RANDOM_LABEL)
-#test_image_array = whitening_image(test_image_array)
+                                                      is_random_label=VALI_RANDOM_LABEL)
+#with tf.name_scope('input_reshape'):
+test_image_array = whitening_image(test_image_array)
+
 print "test array shape"
-print test_image_array.shape
+#print test_image_array.shape
 test_image_array = test_image_array[0:200,:,:,:]
-print test_image_array.shape
-print "4----------"
-#test_image_array = test_image_array[]
+test_labels = test_labels[0:200]
+#print test_image_array.shape
+print "ground truth"
+print(test_labels)
+
 prediction_array = train.test(test_image_array)
+print prediction_array
 print "prediction array shape"
 print (prediction_array.shape)
+print "index for max"
+print np.argmax(prediction_array[0])
 print "sum"
 print np.sum(prediction_array[0])
 
