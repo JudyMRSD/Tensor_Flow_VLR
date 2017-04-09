@@ -52,6 +52,7 @@ def inference(x, is_training,
         x = conv(x, c)
         x = bn(x, c)
         x = activation(x)
+        scale1_x = x 
 
     with tf.variable_scope('scale2'):
         x = _max_pool(x, ksize=3, stride=2)
@@ -59,31 +60,36 @@ def inference(x, is_training,
         c['stack_stride'] = 1
         c['block_filters_internal'] = 64
         x = stack(x, c)
+        scale2_x = x 
 
     with tf.variable_scope('scale3'):
         c['num_blocks'] = num_blocks[1]
         c['block_filters_internal'] = 128
         assert c['stack_stride'] == 2
         x = stack(x, c)
+        scale3_x = x 
 
     with tf.variable_scope('scale4'):
         c['num_blocks'] = num_blocks[2]
         c['block_filters_internal'] = 256
         x = stack(x, c)
+        scale4_x = x 
 
     with tf.variable_scope('scale5'):
         c['num_blocks'] = num_blocks[3]
         c['block_filters_internal'] = 512
         x = stack(x, c)
+        scale5_x = x 
 
     # post-net
     x = tf.reduce_mean(x, axis=[1, 2], name="avg_pool")
-
+    fc_x = 0
     if num_classes != None:
         with tf.variable_scope('fc'):
             x = fc(x, c)
-
-    return x
+            fc_x = x 
+    tf.summary.scalar('scale1_x', scale1_x)
+    return x, scale1_x,scale2_x,scale3_x,scale4_x,scale5_x, fc_x
 
 
 # This is what they use for CIFAR-10 and 100.
@@ -335,3 +341,38 @@ def _max_pool(x, ksize=3, stride=2):
                           ksize=[1, ksize, ksize, 1],
                           strides=[1, stride, stride, 1],
                           padding='SAME')
+
+
+def load_image(path, size=112):
+    img = skimage.io.imread(path)
+    short_edge = min(img.shape[:2])
+    yy = int((img.shape[0] - short_edge) / 2)
+    xx = int((img.shape[1] - short_edge) / 2)
+    crop_img = img[yy:yy + short_edge, xx:xx + short_edge]
+    resized_img = skimage.transform.resize(crop_img, (size, size))
+    return resized_img
+
+
+def test_graph(train_dir='logs'):
+    '''
+    Run this function to look at the graph structure on tensorboard. A fast way!
+    :param train_dir:
+    '''
+    #input_tensor = tf.constant(np.ones([128, 32, 32, 3]), dtype=tf.float32)
+
+    img = load_image("data/cat.jpg")
+    img = img.reshape((1, 112, 112, 3))
+    input_tensor = tf.constant(np.ones([1, 112, 112, 3]), dtype=tf.float32)
+
+    x, scale1_x,scale2_x,scale3_x,scale4_x,scale5_x, fc_x  = inference(input_tensor, is_training=False, num_classes=1000)
+
+    init = tf.global_variables_initializer()
+    sess = tf.Session()
+    sess.run(init)
+    #feed_dict={key:value}
+    o1,o2,o3,o4,o5,o6,o7 = sess.run([x, scale1_x,scale2_x,scale3_x,scale4_x,scale5_x, fc_x], feed_dict={input_tensor: img})
+    print "----------output ------------"
+    print o1.shape,o2.shape,o3.shape,o4.shape,o5.shape,o6.shape,o7.shape
+    summary_writer = tf.summary.FileWriter(train_dir, sess.graph)
+    
+test_graph()

@@ -294,11 +294,11 @@ def main(argv=None):  # pylint: disable=unused-argument
     images_val, labels_val = inputs(True, FLAGS.data_dir, FLAGS.batch_size)
 
     is_training = tf.placeholder('bool', [], name='is_training')
-    print (is_training)
+
     images, labels = tf.cond(is_training,
         lambda: (images_train, labels_train),
         lambda: (images_val, labels_val))
-    print ("images", images)
+    print ("is_training",is_training)
 
     logits = inference_small(images,
                              num_classes=10,
