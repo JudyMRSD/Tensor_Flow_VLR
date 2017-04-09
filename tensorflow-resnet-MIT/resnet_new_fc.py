@@ -83,13 +83,14 @@ def inference(x, is_training,
 
     # post-net
     x = tf.reduce_mean(x, axis=[1, 2], name="avg_pool")
+    avg_pool_x = x 
     fc_x = 0
     if num_classes != None:
         with tf.variable_scope('fc'):
             x = fc(x, c)
             fc_x = x 
     tf.summary.scalar('scale1_x', scale1_x)
-    return x, scale1_x,scale2_x,scale3_x,scale4_x,scale5_x, fc_x
+    return x, scale1_x,scale2_x,scale3_x,scale4_x,scale5_x, avg_pool_x, fc_x  
 
 
 # This is what they use for CIFAR-10 and 100.
@@ -360,20 +361,20 @@ def test_graph(train_dir='logs'):
     :param train_dir:
     '''
     #input_tensor = tf.constant(np.ones([128, 32, 32, 3]), dtype=tf.float32)
-
-    img = load_image("data/cat.jpg")
-    img = img.reshape((1, 112, 112, 3))
-    input_tensor = tf.constant(np.ones([1, 112, 112, 3]), dtype=tf.float32)
-
-    x, scale1_x,scale2_x,scale3_x,scale4_x,scale5_x, fc_x  = inference(input_tensor, is_training=False, num_classes=1000)
-
+    #observaation and target
+    img_o = load_image("data/cat.jpg")
+    img_t = load_image("data/cat.jpg")
+    img_o = img_o.reshape((112, 112, 3))
+    img_t = img_t.reshape((112, 112, 3))
+    input_tensor = tf.constant(np.ones([2, 112, 112, 3]), dtype=tf.float32)
+    o, scale1_o,scale2_o,scale3_o,scale4_o,scale5_o, avg_pool_o, fc_o  = inference(input_tensor, is_training=False, num_classes=1000)
+    
     init = tf.global_variables_initializer()
     sess = tf.Session()
     sess.run(init)
     #feed_dict={key:value}
-    o1,o2,o3,o4,o5,o6,o7 = sess.run([x, scale1_x,scale2_x,scale3_x,scale4_x,scale5_x, fc_x], feed_dict={input_tensor: img})
-    print "----------output ------------"
-    print o1.shape,o2.shape,o3.shape,o4.shape,o5.shape,o6.shape,o7.shape
+    o1,o2,o3,o4,o5,o6,o7,o8 = sess.run([o, scale1_o,scale2_o,scale3_o,scale4_o,scale5_o, avg_pool_o, fc_o], feed_dict={input_tensor: [img_o,img_t]})
+    print o1.shape,o2.shape,o3.shape,o4.shape,o5.shape,o6.shape,o7.shape,o8.shape 
     summary_writer = tf.summary.FileWriter(train_dir, sess.graph)
     
 test_graph()
