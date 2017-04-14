@@ -61,6 +61,7 @@ class Train(object):
         self.full_loss = tf.add_n([loss] + regu_losses)
 
         predictions = tf.nn.softmax(logits)
+
         self.train_top1_error = self.top_k_error(predictions, self.label_placeholder, 1)
 
 
@@ -230,7 +231,7 @@ class Train(object):
         logits = inference(self.test_image_placeholder, FLAGS.num_residual_blocks, reuse=False)
         print "7----------"
         predictions = tf.nn.softmax(logits)
-
+    
         # Initialize a new session and restore a checkpoint
         print "8----------"
         saver = tf.train.Saver(tf.global_variables())
@@ -287,7 +288,10 @@ class Train(object):
             #print "batch image prediction array"
             #print (batch_prediction_array)
             print "23----------"
+
             prediction_array = np.concatenate((prediction_array, batch_prediction_array))
+            print "argmax ---------"
+            print np.argmax(prediction_array,axis=1)
 
         return prediction_array
 
@@ -457,6 +461,8 @@ train = Train()
 print "3----------"
 test_image_array, test_labels = read_in_all_images([vali_dir],
                                                        is_random_label=VALI_RANDOM_LABEL)
+print "test labels"
+print test_labels[0:200]
 #test_image_array = whitening_image(test_image_array)
 print "test array shape"
 print test_image_array.shape
@@ -465,6 +471,7 @@ print test_image_array.shape
 print "4----------"
 #test_image_array = test_image_array[]
 prediction_array = train.test(test_image_array)
+print prediction_array
 print "prediction array shape"
 print (prediction_array.shape)
 print "sum"
