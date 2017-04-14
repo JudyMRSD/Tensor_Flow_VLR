@@ -28,6 +28,8 @@ def train():
 
   with tf.name_scope('input_reshape'):
     image_shaped_input = tf.reshape(x, [-1, 28, 28, 1])
+    print ("-------------input shape-----------")
+    print (image_shaped_input.shape)
     tf.summary.image('input', image_shaped_input, 10)
 
   # We can't initialize these variables to 0 - the network will get stuck.

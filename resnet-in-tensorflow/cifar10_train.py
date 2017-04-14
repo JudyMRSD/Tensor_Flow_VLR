@@ -234,7 +234,7 @@ class Train(object):
         sess = tf.Session()
         #saver.restore(sess, './model.ckpt')
 
-        saver.restore(sess, './model_110.ckpt')
+        saver.restore(sess, '/Users/jinzhu/Google Drive/2017 spring/visual learning recognition/Project/Tensor Flow/tensorflow-resnet-MIT/data/tensorflow-resnet-pretrained-20160509/ResNet-L50.ckpt')
         #saver.restore(sess, FLAGS.test_ckpt_path)
         #print 'Model restored from ', FLAGS.test_ckpt_path
         prediction_array = np.array([]).reshape(-1, NUM_CLASS)

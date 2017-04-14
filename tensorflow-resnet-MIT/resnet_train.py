@@ -3,6 +3,7 @@ import tensorflow as tf
 
 MOMENTUM = 0.9
 
+#model saved in ../resnet_train
 FLAGS = tf.app.flags.FLAGS
 tf.app.flags.DEFINE_string('train_dir', '../resnet_train',
                            """Directory where to write event logs """

@@ -227,4 +227,3 @@ def test_graph(train_dir='logs'):
     sess = tf.Session()
     sess.run(init)
     summary_writer = tf.summary.FileWriter(train_dir, sess.graph)
-

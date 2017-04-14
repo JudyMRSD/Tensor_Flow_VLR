@@ -83,14 +83,19 @@ def inference(x, is_training,
 
     # post-net
     x = tf.reduce_mean(x, axis=[1, 2], name="avg_pool")
-    avg_pool_x = x 
+    avg_pool_x = x
+    #flatten 4x2048
+    x = tf.reshape(x, [1,-1])
+    flatten_x = x 
+    print "shape of x ", x.shape
+
     fc_x = 0
     if num_classes != None:
         with tf.variable_scope('fc'):
-            x = fc(x, c)
+            x = fc(x)
             fc_x = x 
     tf.summary.scalar('scale1_x', scale1_x)
-    return x, scale1_x,scale2_x,scale3_x,scale4_x,scale5_x, avg_pool_x, fc_x  
+    return x, scale1_x,scale2_x,scale3_x,scale4_x,scale5_x, avg_pool_x, flatten_x,fc_x  
 
 
 # This is what they use for CIFAR-10 and 100.
@@ -139,7 +144,7 @@ def inference_small_config(x, c):
 
     if c['num_classes'] != None:
         with tf.variable_scope('fc'):
-            x = fc(x, c)
+            x = fc(x)
 
     return x
 
@@ -278,8 +283,8 @@ def bn(x, c):
 
     return x
 
-
-def fc(x, c):
+#def fc(x, c):
+def fc(x):
     num_units_in = x.get_shape()[1]
     num_units_out = 512
     #num_units_out = c['fc_units_out']
@@ -355,26 +360,57 @@ def load_image(path, size=112):
     return resized_img
 
 
-def test_graph(train_dir='logs'):
+def test_graph(train_dir='resnet_new_fc_logs'):
     '''
     Run this function to look at the graph structure on tensorboard. A fast way!
     :param train_dir:
     '''
     #input_tensor = tf.constant(np.ones([128, 32, 32, 3]), dtype=tf.float32)
-    #observaation and target
-    img_o = load_image("data/cat.jpg")
-    img_t = load_image("data/cat.jpg")
-    img_o = img_o.reshape((112, 112, 3))
-    img_t = img_t.reshape((112, 112, 3))
-    input_tensor = tf.constant(np.ones([2, 112, 112, 3]), dtype=tf.float32)
-    o, scale1_o,scale2_o,scale3_o,scale4_o,scale5_o, avg_pool_o, fc_o  = inference(input_tensor, is_training=False, num_classes=1000)
-    
+    #4 observation frames 
+    img1 = load_image("data/cat.jpg")
+    img2 = load_image("data/cat.jpg")
+    img3 = load_image("data/cat.jpg")
+    img4 = load_image("data/cat.jpg")
+    img1 = img1.reshape((112, 112, 3))
+    img2 = img2.reshape((112, 112, 3))
+    img3 = img3.reshape((112, 112, 3))
+    img4 = img4.reshape((112, 112, 3))
+
+    img5 = load_image("data/cat.jpg")
+    img5 = img5.reshape((1,112, 112, 3))
+    with tf.variable_scope("resnet1"):
+        # Variables created here will be named "conv1/weights", "conv1/biases".
+        input_tensor_o = tf.constant(np.ones([4, 112, 112, 3]), dtype=tf.float32)
+        o, scale1_o,scale2_o,scale3_o,scale4_o,scale5_o, avg_pool_o, flatten_o,fc_o = inference(input_tensor_o, is_training=False, num_classes=1000)
+
+    with tf.variable_scope("resnet2"):
+        # Variables created here will be named "conv2/weights", "conv2/biases".
+        input_tensor_t = tf.constant(np.ones([1, 112, 112, 3]), dtype=tf.float32)
+        t, scale1_t,scale2_t,scale3_t,scale4_t,scale5_t, avg_pool_t, flatten_t,fc_t  = inference(input_tensor_t, is_training=False, num_classes=1000)
+
+    result = fc(o)
+    #print o1.shape,o2.shape,o3.shape,o4.shape,o5.shape,o6.shape,o7.shape,o8.shape 
+    #print t1.shape,t2.shape,t3.shape,t4.shape,t5.shape,t6.shape,t7.shape,t8.shape 
     init = tf.global_variables_initializer()
     sess = tf.Session()
     sess.run(init)
-    #feed_dict={key:value}
-    o1,o2,o3,o4,o5,o6,o7,o8 = sess.run([o, scale1_o,scale2_o,scale3_o,scale4_o,scale5_o, avg_pool_o, fc_o], feed_dict={input_tensor: [img_o,img_t]})
-    print o1.shape,o2.shape,o3.shape,o4.shape,o5.shape,o6.shape,o7.shape,o8.shape 
+
+    o1,o2,o3,o4,o5,o6,o7,o8,o9 = sess.run([o, scale1_o,scale2_o,scale3_o,scale4_o,scale5_o, avg_pool_o, flatten_o, fc_o], feed_dict={input_tensor_o: [img1,img2,img3,img4]})
+    t1,t2,t3,t4,t5,t6,t7,t8,t9 = sess.run([t, scale1_t,scale2_t,scale3_t,scale4_t,scale5_t, avg_pool_t, flatten_t, fc_t ], feed_dict={input_tensor_t: img5})
+    saver = tf.train.Saver(tf.global_variables())
+
+    print o1.shape,o2.shape,o3.shape,o4.shape,o5.shape,o6.shape,o7.shape,o8.shape,o9.shape
+    print t1.shape,t2.shape,t3.shape,t4.shape,t5.shape,t6.shape,t7.shape,t8.shape,t9.shape
     summary_writer = tf.summary.FileWriter(train_dir, sess.graph)
+    
+ 
+   
+    #print o1.shape,o2.shape,o3.shape,o4.shape,o5.shape,o6.shape,o7.shape,o8.shape 
+    #print t1.shape,t2.shape,t3.shape,t4.shape,t5.shape,t6.shape,t7.shape,t8.shape 
+
+    summary_writer = tf.summary.FileWriter(train_dir, sess.graph)
+    checkpoint_path = os.path.join(train_dir, 'model.ckpt')
+    saver.save(sess, checkpoint_path, global_step=0)
+
     
 test_graph()
