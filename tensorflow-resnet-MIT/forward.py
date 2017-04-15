@@ -31,21 +31,13 @@ def print_prob(prob):
     top5 = [synset[pred[i]] for i in range(5)]
     print "Top5: ", top5
     return top1
-def checkpoint_fn(layers):
-    return 'ResNet-L%d.ckpt' % layers
-
-
-def meta_fn(layers):
-    return 'ResNet-L%d.meta' % layers
 
 layers = 50
 
-img = load_image("data/elephant.jpg")
-
+img = load_image("data/cat.jpg")
 sess = tf.Session()
 
 #new_saver = tf.train.import_meta_graph(meta_fn(layers))
-#new_saver.restore(sess, checkpoint_fn(layers))
 path_model = '/Users/jinzhu/Google Drive/2017 spring/visual learning recognition/Project/Tensor Flow/tensorflow-resnet-MIT/data/tensorflow-resnet-pretrained-20160509/ResNet-L50.meta'
 
 path_model2 = '/Users/jinzhu/Google Drive/2017 spring/visual learning recognition/Project/Tensor Flow/tensorflow-resnet-MIT/data/tensorflow-resnet-pretrained-20160509/ResNet-L50.ckpt'
