@@ -52,7 +52,6 @@ def inference(x, is_training,
         x = conv(x, c)
         x = bn(x, c)
         x = activation(x)
-        scale1_x = x 
 
     with tf.variable_scope('scale2'):
         x = _max_pool(x, ksize=3, stride=2)
@@ -60,36 +59,31 @@ def inference(x, is_training,
         c['stack_stride'] = 1
         c['block_filters_internal'] = 64
         x = stack(x, c)
-        scale2_x = x 
 
     with tf.variable_scope('scale3'):
         c['num_blocks'] = num_blocks[1]
         c['block_filters_internal'] = 128
         assert c['stack_stride'] == 2
         x = stack(x, c)
-        scale3_x = x 
 
     with tf.variable_scope('scale4'):
         c['num_blocks'] = num_blocks[2]
         c['block_filters_internal'] = 256
         x = stack(x, c)
-        scale4_x = x 
 
     with tf.variable_scope('scale5'):
         c['num_blocks'] = num_blocks[3]
         c['block_filters_internal'] = 512
         x = stack(x, c)
-        scale5_x = x 
 
     # post-net
-    x = tf.reduce_mean(x, axis=[1, 2], name="avg_pool")
-    fc_x = 0
+    x = tf.reduce_mean(x, reduction_indices=[1, 2], name="avg_pool")
+
     if num_classes != None:
         with tf.variable_scope('fc'):
             x = fc(x, c)
-            fc_x = x 
-    tf.summary.scalar('scale1_x', scale1_x)
-    return x, scale1_x,scale2_x,scale3_x,scale4_x,scale5_x, fc_x
+
+    return x
 
 
 # This is what they use for CIFAR-10 and 100.
@@ -107,8 +101,7 @@ def inference_small(x,
     c['fc_units_out'] = num_classes
     c['num_blocks'] = num_blocks
     c['num_classes'] = num_classes
-    logits=inference_small_config(x, c)
-    return logits 
+    inference_small_config(x, c)
 
 def inference_small_config(x, c):
     c['bottleneck'] = False
@@ -134,7 +127,7 @@ def inference_small_config(x, c):
         x = stack(x, c)
 
     # post-net
-    x = tf.reduce_mean(x, axis=[1, 2], name="avg_pool")
+    x = tf.reduce_mean(x, reduction_indices=[1, 2], name="avg_pool")
 
     if c['num_classes'] != None:
         with tf.variable_scope('fc'):
@@ -145,20 +138,20 @@ def inference_small_config(x, c):
 
 def _imagenet_preprocess(rgb):
     """Changes RGB [0,1] valued image to BGR [0,255] with mean subtracted."""
-    red, green, blue = tf.split(axis=3, num_or_size_splits=3, value=rgb * 255.0)
-    bgr = tf.concat(axis=3, values=[blue, green, red])
+    red, green, blue = tf.split(3, 3, rgb * 255.0)
+    bgr = tf.concat(3, [blue, green, red])
     bgr -= IMAGENET_MEAN_BGR
     return bgr
 
 
 def loss(logits, labels):
-    cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(logits=logits, labels=labels)
+    cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(logits, labels)
     cross_entropy_mean = tf.reduce_mean(cross_entropy)
  
     regularization_losses = tf.get_collection(tf.GraphKeys.REGULARIZATION_LOSSES)
 
     loss_ = tf.add_n([cross_entropy_mean] + regularization_losses)
-    tf.summary.scalar('loss', loss_)
+    tf.scalar_summary('loss', loss_)
 
     return loss_
 
@@ -237,7 +230,7 @@ def bn(x, c):
 
     if c['use_bias']:
         bias = _get_variable('bias', params_shape,
-                             initializer=tf.zeros_initializer())
+                             initializer=tf.zeros_initializer)
         return x + bias
 
 
@@ -245,18 +238,18 @@ def bn(x, c):
 
     beta = _get_variable('beta',
                          params_shape,
-                         initializer=tf.zeros_initializer())
+                         initializer=tf.zeros_initializer)
     gamma = _get_variable('gamma',
                           params_shape,
-                          initializer=tf.ones_initializer())
+                          initializer=tf.ones_initializer)
 
     moving_mean = _get_variable('moving_mean',
                                 params_shape,
-                                initializer=tf.zeros_initializer(),
+                                initializer=tf.zeros_initializer,
                                 trainable=False)
     moving_variance = _get_variable('moving_variance',
                                     params_shape,
-                                    initializer=tf.ones_initializer(),
+                                    initializer=tf.ones_initializer,
                                     trainable=False)
 
     # These ops will only be preformed when training.
@@ -281,7 +274,6 @@ def bn(x, c):
 def fc(x, c):
     num_units_in = x.get_shape()[1]
     num_units_out = c['fc_units_out']
-    print ("fc layer in, out shape----------", num_units_in, num_units_out)
     weights_initializer = tf.truncated_normal_initializer(
         stddev=FC_WEIGHT_STDDEV)
 
@@ -291,7 +283,7 @@ def fc(x, c):
                             weight_decay=FC_WEIGHT_STDDEV)
     biases = _get_variable('biases',
                            shape=[num_units_out],
-                           initializer=tf.zeros_initializer())
+                           initializer=tf.zeros_initializer)
     x = tf.nn.xw_plus_b(x, weights, biases)
     return x
 
@@ -324,9 +316,7 @@ def conv(x, c):
     filters_out = c['conv_filters_out']
 
     filters_in = x.get_shape()[-1]
-
     shape = [ksize, ksize, filters_in, filters_out]
-    print ("conv layer shape: ksize, ksize, filters_in, filters_out", filters_in)
     initializer = tf.truncated_normal_initializer(stddev=CONV_WEIGHT_STDDEV)
     weights = _get_variable('weights',
                             shape=shape,
@@ -341,42 +331,3 @@ def _max_pool(x, ksize=3, stride=2):
                           ksize=[1, ksize, ksize, 1],
                           strides=[1, stride, stride, 1],
                           padding='SAME')
-
-
-def load_image(path, size=112):
-    img = skimage.io.imread(path)
-    short_edge = min(img.shape[:2])
-    yy = int((img.shape[0] - short_edge) / 2)
-    xx = int((img.shape[1] - short_edge) / 2)
-    crop_img = img[yy:yy + short_edge, xx:xx + short_edge]
-    resized_img = skimage.transform.resize(crop_img, (size, size))
-    return resized_img
-
-
-def test_graph(train_dir='logs'):
-    '''
-    Run this function to look at the graph structure on tensorboard. A fast way!
-    :param train_dir:
-    '''
-    #input_tensor = tf.constant(np.ones([128, 32, 32, 3]), dtype=tf.float32)
-
-    img = load_image("data/cat.jpg")
-    img = img.reshape((1, 112, 112, 3))
-    input_tensor = tf.constant(np.ones([1, 112, 112, 12]), dtype=tf.float32)
-    input_tensor2 = tf.constant(np.ones([1, 112, 112, 3]), dtype=tf.float32)
-
-    x, scale1_x,scale2_x,scale3_x,scale4_x,scale5_x, fc_x  = inference(input_tensor, is_training=False, num_classes=1000)
-    saver = tf.train.Saver(tf.global_variables())
-
-    init = tf.global_variables_initializer()
-    sess = tf.Session()
-    sess.run(init)
-    #feed_dict={key:value}
-    o1,o2,o3,o4,o5,o6,o7 = sess.run([x, scale1_x,scale2_x,scale3_x,scale4_x,scale5_x, fc_x], feed_dict={input_tensor: img})
-    print "----------output ------------"
-    print o1.shape,o2.shape,o3.shape,o4.shape,o5.shape,o6.shape,o7.shape
-    summary_writer = tf.summary.FileWriter(train_dir, sess.graph)
-    checkpoint_path = os.path.join(train_dir, 'model.ckpt')
-    saver.save(sess, checkpoint_path, global_step=0)
-    
-test_graph()
