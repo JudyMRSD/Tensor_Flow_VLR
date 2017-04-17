@@ -59,7 +59,10 @@ def _get_variable(name,
                            trainable=trainable)
 
 def fc(x, num_units_out=512):
+    
     num_units_in = x.get_shape()[1]
+    print "num in ", num_units_in
+    print "-------0-----------"
     weights_initializer = tf.truncated_normal_initializer(
         stddev=FC_WEIGHT_STDDEV)
     print "------1------"
@@ -72,8 +75,14 @@ def fc(x, num_units_out=512):
                            shape=[num_units_out],
                            initializer=tf.zeros_initializer())
     print "------3------"
+    print weights 
+    print biases 
+    print x
     x = tf.nn.xw_plus_b(x, weights, biases)
+
     print "------4------"
+    print weights 
+    print biases 
     return x
 
 def run_graph(train_dir='2graph_logs'):
@@ -95,7 +104,12 @@ def run_graph(train_dir='2graph_logs'):
 
   output_conv =graph.get_tensor_by_name('avg_pool:0')
   images = graph.get_tensor_by_name("images:0")
+
   output_conv_sg = tf.stop_gradient(output_conv) # It's an identity function
+
+  print "-----------10---------"
+  print "output_conv", output_conv #Tensor("avg_pool:0", shape=(?, 2048), dtype=float32, device=/device:CPU:0)
+  print "output_conv_sg",output_conv_sg #Tensor("StopGradient:0", shape=(?, 2048), dtype=float32)
 
 
   img = load_image("cat.jpg")
@@ -103,10 +117,24 @@ def run_graph(train_dir='2graph_logs'):
 
   print "graph restored"
 
+  print "-----------11-----------"
+  output_1 = sess.run([output_conv_sg], feed_dict={images:img})
 
-  output_graph1 = sess.run([output_conv], feed_dict={images:img})
+  print "output1"
+  #convert to tensorflow output_1
 
-  print output_graph1 
+  #reshape(t, [2, -1])
+
+
+  output_1_tf = tf.stack(output_1)
+  print output_1_tf
+  tf_2 = tf.reshape(output_1_tf,[1,-1])
+  #tf_2 = tf.squeeze(output_1_tf)
+  fc(tf_2, 512)
+  #output_2 = sess.run(fc_output)
+  print "----------------12------------"
+  print graph
+  print "-------------13--------------"
 
   train_writer = tf.summary.FileWriter(train_dir,
                                       sess.graph)

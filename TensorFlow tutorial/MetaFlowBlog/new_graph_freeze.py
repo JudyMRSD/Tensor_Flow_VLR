@@ -58,6 +58,7 @@ def _get_variable(name,
 
 def fc(x, num_units_out=512):
     num_units_in = x.get_shape()[1]
+    print num_units_in
     weights_initializer = tf.truncated_normal_initializer(
         stddev=FC_WEIGHT_STDDEV)
     print "------1------"
@@ -72,6 +73,8 @@ def fc(x, num_units_out=512):
     print "------3------"
     x = tf.nn.xw_plus_b(x, weights, biases)
     print "------4------"
+    print weights 
+    print biases 
     return x
 
 
@@ -95,7 +98,8 @@ print "output shape-----",output_conv_sg.shape
 #fc layer 
 
 print "-----start fc-----"
-fc(output_conv_sg, 512)
+
+print fc(output_conv_sg, 512)
 print "-----------finish fc-------"
 
 with tf.Session() as sess:
