@@ -144,13 +144,25 @@ def run_graph(train_dir='2graph_logs'):
   reshape_output_2_tf = tf.reshape(output_2_tf,[1,-1])
   #tf_2 = tf.squeeze(output_1_tf)
   with tf.variable_scope("resnet1"):
-    fc(reshape_output_1_tf, 512)
+    fc_output = fc(reshape_output_1_tf, 512)
   with tf.variable_scope("resnet2"):
-    fc(reshape_output_2_tf, 512)
+    fc_output2 = fc(reshape_output_2_tf, 512)
   #output_2 = sess.run(fc_output)
   print "----------------12------------"
   print graph
   print "-------------13--------------"
+
+  
+  print fc_output#Tensor("resnet1_1/xw_plus_b:0", shape=(1, 512), dtype=float32)
+
+  print fc_output2#Tensor("resnet1_1/xw_plus_b:0", shape=(1, 512), dtype=float32)
+
+  with tf.variable_scope("resnet3"):
+    fc_concat = tf.concat([fc_output , fc_output2],1)
+    fc_3 = fc(fc_concat,512)
+  print fc_concat#Tensor("resnet3/concat:0", shape=(1, 1024), dtype=float32)
+
+  print fc_3#Tensor("resnet3/xw_plus_b:0", shape=(1, 512), dtype=float32)
 
   train_writer = tf.summary.FileWriter(train_dir,
                                       sess.graph)
