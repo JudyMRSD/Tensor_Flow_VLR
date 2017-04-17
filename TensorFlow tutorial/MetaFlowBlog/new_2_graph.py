@@ -1,3 +1,6 @@
+#multiple graphs
+#https://www.quora.com/How-does-one-create-separate-graphs-in-TensorFlow
+#http://stackoverflow.com/questions/35955144/working-with-multiple-graphs-in-tensorflow
 import tensorflow as tf
 import skimage.io  # bug. need to import this before tensorflow
 import skimage.transform  # bug. need to import this before tensorflow
@@ -55,7 +58,6 @@ def _get_variable(name,
                            collections=collections,
                            trainable=trainable)
 
-
 def fc(x, num_units_out=512):
     num_units_in = x.get_shape()[1]
     weights_initializer = tf.truncated_normal_initializer(
@@ -74,37 +76,39 @@ def fc(x, num_units_out=512):
     print "------4------"
     return x
 
+def run_graph(train_dir='2graph_logs'):
 
-# Load the VGG-16 model in the default graph
-vgg_saver = tf.train.import_meta_graph('/Users/jinzhu/Google Drive/2017 spring/visual learning recognition/Project/Tensor Flow/tensorflow-resnet-MIT/data/tensorflow-resnet-pretrained-20160509/ResNet-L50.meta')
-# Access the graph
-vgg_graph = tf.get_default_graph()
+  path_model = '/Users/jinzhu/Google Drive/2017 spring/visual learning recognition/Project/Tensor Flow/tensorflow-resnet-MIT/data/tensorflow-resnet-pretrained-20160509/ResNet-L50.meta'
 
-# Retrieve VGG inputs
-img = load_image("cat.jpg")
-img = img.reshape((1, 112, 112, 3))
-#input_vgg = tf.constant(np.ones([1, 112, 112, 3]), dtype=tf.float32)
-#input_vgg = vgg_graph.get_tensor_by_name('Const:0')
-#print input_vgg.shape
+  path_model2 = '/Users/jinzhu/Google Drive/2017 spring/visual learning recognition/Project/Tensor Flow/tensorflow-resnet-MIT/data/tensorflow-resnet-pretrained-20160509/ResNet-L50.ckpt'
+  
+  init = tf.global_variables_initializer()
+  
+  sess = tf.Session()
+  sess.run(init)
 
-output_conv =vgg_graph.get_tensor_by_name('avg_pool:0')
-# Stop the gradient for fine-tuning
-output_conv_sg = tf.stop_gradient(output_conv) # It's an identity function
-print "output shape-----",output_conv_sg.shape
-# Build further operations
-#fc layer 
+  saver = tf.train.import_meta_graph(path_model)
+  print "9---------------"
+  saver.restore(sess, path_model2)
+  graph = tf.get_default_graph()
 
-print "-----start fc-----"
-fc(output_conv_sg, 512)
-print "-----------finish fc-------"
 
-with tf.Session() as sess:
-  # Init v and v2   
-  sess.run(tf.global_variables_initializer())
-  # Now v1 holds the value 1.0 and v2 holds the value 2.0
-  # We can now save all those values
+  output_conv =graph.get_tensor_by_name('avg_pool:0')
+  images = graph.get_tensor_by_name("images:0")
+  output_conv_sg = tf.stop_gradient(output_conv) # It's an identity function
 
-  vgg_saver.save(sess, 'new_data-all.chkp')
 
-train_writer = tf.summary.FileWriter(dir,
+  img = load_image("cat.jpg")
+  img = img.reshape((1, 112, 112, 3))
+
+  print "graph restored"
+
+
+  output_graph1 = sess.run([output_conv], feed_dict={images:img})
+
+  print output_graph1 
+
+  train_writer = tf.summary.FileWriter(train_dir,
                                       sess.graph)
+
+run_graph()
