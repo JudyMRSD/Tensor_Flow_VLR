@@ -101,24 +101,33 @@ def run_graph(train_dir='2graph_logs'):
   saver.restore(sess, path_model2)
   graph = tf.get_default_graph()
 
-
-  output_conv =graph.get_tensor_by_name('avg_pool:0')
-  images = graph.get_tensor_by_name("images:0")
-
-  output_conv_sg = tf.stop_gradient(output_conv) # It's an identity function
-
-  print "-----------10---------"
-  print "output_conv", output_conv #Tensor("avg_pool:0", shape=(?, 2048), dtype=float32, device=/device:CPU:0)
-  print "output_conv_sg",output_conv_sg #Tensor("StopGradient:0", shape=(?, 2048), dtype=float32)
-
-
   img = load_image("cat.jpg")
   img = img.reshape((1, 112, 112, 3))
+
+  img2 = load_image("cat.jpg")
+  img2 = img2.reshape((1, 112, 112, 3))
+
+  
+  with tf.variable_scope("resnet1"):
+    output_conv =graph.get_tensor_by_name('avg_pool:0')
+    images = graph.get_tensor_by_name("images:0")
+    output_conv_sg = tf.stop_gradient(output_conv) # It's an identity function
+    
+  with tf.variable_scope("resnet2"):
+    output_conv2=graph.get_tensor_by_name('avg_pool:0')
+    images2 = graph.get_tensor_by_name("images:0")
+    output_conv_sg2 = tf.stop_gradient(output_conv) # It's an identity function
+
+  print "-----------10---------"
+  #print "output_conv", output_conv #Tensor("avg_pool:0", shape=(?, 2048), dtype=float32, device=/device:CPU:0)
+  #print "output_conv_sg",output_conv_sg #Tensor("StopGradient:0", shape=(?, 2048), dtype=float32)
+
 
   print "graph restored"
 
   print "-----------11-----------"
   output_1 = sess.run([output_conv_sg], feed_dict={images:img})
+  output_2 = sess.run([output_conv_sg2], feed_dict={images:img2})
 
   print "output1"
   #convert to tensorflow output_1
@@ -127,10 +136,17 @@ def run_graph(train_dir='2graph_logs'):
 
 
   output_1_tf = tf.stack(output_1)
+  output_2_tf = tf.stack(output_2)
+  print "------reshape-"
   print output_1_tf
-  tf_2 = tf.reshape(output_1_tf,[1,-1])
+  print output_2_tf
+  reshape_output_1_tf = tf.reshape(output_1_tf,[1,-1])
+  reshape_output_2_tf = tf.reshape(output_2_tf,[1,-1])
   #tf_2 = tf.squeeze(output_1_tf)
-  fc(tf_2, 512)
+  with tf.variable_scope("resnet1"):
+    fc(reshape_output_1_tf, 512)
+  with tf.variable_scope("resnet2"):
+    fc(reshape_output_2_tf, 512)
   #output_2 = sess.run(fc_output)
   print "----------------12------------"
   print graph
